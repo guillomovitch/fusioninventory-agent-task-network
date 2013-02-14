@@ -21,7 +21,7 @@ GetOptions(
     'first=s',
     'last=s',
     'dictionnary=s',
-    'community=s',
+    'authentication=s@',
     'entity=s',
     'threads=i',
     'verbose',
@@ -67,24 +67,22 @@ $discovery->{options} = {
             IPEND   => $options->{last},
         }
     ],
-    AUTHENTICATION => [
-        {
-            ID        => 1,
-            COMMUNITY => $options->{community},
-            VERSION   => '3'
-        },
-        {
-            ID        => 1,
-            COMMUNITY => $options->{community},
-            VERSION   => '2c'
-        },
-        {
-            ID        => 1,
-            COMMUNITY => $options->{community},
-            VERSION   => '1'
-        }
-    ]
 };
+
+my $id = 1;
+foreach my $string (@{$options->{authentication}}) {
+    my $authentication = {
+        ID => $id++
+    };
+    foreach my $parameter (split(/,/, $string)) {
+        my ($key, $value) = split(/:/, $parameter);
+        $authentication->{uc($key)} = $value;
+    }
+    push @{$discovery->{options}->{AUTHENTICATION}}, $authentication;
+}
+use Data::Dumper;
+print Dumper($discovery);
+
 if ($options->{dictionnary}) {
     die "no such file $options->{dictionnary}"
         unless -f $options->{dictionnary};
@@ -186,18 +184,39 @@ fusioninventory-netdiscovery - Standalone network discovery
 fusioninventory-netdiscovery [options] --first <start> --last <stop>
 
   Options:
-    --first address IP range first address
-    --last address  IP range last address
-    --dictionnary   dictionnary file
-    --community     community string (default: public)
-    --entity        GLPI entity
-    --threads nb    number of discovery threads (default: 1)
-    --verbose       verbose output (control messages)
-    --debug         debug output (execution traces)
-    -h --help       print this message and exit
-    --version       print the task version and exit
+    --first address  IP range first address
+    --last address   IP range last address
+    --dictionnary    dictionnary file
+    --authentication authentication specification
+    --entity         GLPI entity
+    --threads nb     number of discovery threads (default: 1)
+    --verbose        verbose output (control messages)
+    --debug          debug output (execution traces)
+    -h --help        print this message and exit
+    --version        print the task version and exit
 
 =head1 DESCRIPTION
 
 F<fusioninventory-netdiscovery> allows to run a network discovery task without a
 GLPI server.
+
+=head1 OPTIONS
+
+=over
+
+=item B<--authentication>
+
+A coma-separated list of key:value pairs, for SNMP authentication. IE:
+
+=back
+
+=item * version:1,community:public
+
+=item * version:3,username:foo,authpassword:bar
+
+=over
+
+Multiple occurences are allowed, allowing multiple authentication attempts for
+each replying adress. Caution, each failed attempt involves a timeout...
+
+=back
